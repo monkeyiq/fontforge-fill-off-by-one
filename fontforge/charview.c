@@ -1106,6 +1106,9 @@ void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *s
 		    DrawPoint(cv,pixmap,spl->last,spl,dopoints<0,truetype_markup);
 	    }
 	}
+    }
+
+    for ( spl = set; spl!=NULL; spl = spl->next ) {
 	if ( GDrawHasCairo(pixmap)&gc_buildpath ) {
 	    Spline *first, *spline;
 	    double x,y, cx1, cy1, cx2, cy2, dx,dy;
@@ -1153,8 +1156,10 @@ void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *s
 	    }
 	    if ( spline!=NULL )
 		GDrawPathClose(pixmap);
-	    printf("pathfill splintCounter:%d sfm:%d sf:%d sfc:%d spl:%p\n",
-		   currentSplineCounter, strokeFillMode,
+	    printf("pathfill splintCounter:%d winding-clock:%d sfm:%d sf:%d sfc:%d spl:%p\n",
+		   currentSplineCounter,
+		   SplinePointListIsClockwise(spl),
+		   strokeFillMode,
 		   cv->showfilled, cv->showfilledusingcairo,
 		   spl );
 
@@ -1164,12 +1169,18 @@ void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *s
 		GDrawPathStroke(pixmap,(spl->is_clip_path ? clippathcol : fg)|0xff000000);
 		break;
 	    case sfm_fill:
-		if( currentSplineCounter == 1 ) {
-		    GDrawPathFill( pixmap, (spl->is_clip_path ? clippathcol : fg)|0xff000000);
-		} else {
-		    GDrawPathFill( pixmap, (default_background)|0xff000000);
+	    {
+		if( currentSplineCounter == 3 )
+		    break;
+		
+		int clockwise = SplinePointListIsClockwise(spl);
+		Color fillColor = default_background;
+		if( clockwise ) {
+		    fillColor = spl->is_clip_path ? clippathcol : fg;
 		}
+		GDrawPathFill( pixmap, fillColor|0xff000000);
 		break;
+	    }
 	    }
 	    
 	} else {
@@ -1178,6 +1189,9 @@ void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *s
 		GDrawDrawPoly(pixmap,cur->gp,cur->cnt,spl->is_clip_path ? clippathcol : fg);
 	    GPLFree(gpl);
 	}
+    }
+    
+    for ( spl = set; spl!=NULL; spl = spl->next ) {
 	if (( cv->markextrema || cv->markpoi ) && dopoints && !cv->b.sc->inspiro )
 	    CVMarkInterestingLocations(cv,pixmap,spl);
 	if ( (cv->showalmosthvlines || cv->showalmosthvcurves ) && dopoints )
