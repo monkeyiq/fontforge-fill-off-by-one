@@ -56,6 +56,7 @@ extern struct cvshows {
     int hvoffset;
     int checkselfintersects;	/* Not really something shown, but convenient to keep it here */
     int showdebugchanges;	/* Changes the way changing rasters are displayed in tt debug mode */
+    int showfilledusingcairo;   /* fill the glyph, but directly use cairo to do the fill rather than freetype */
 } CVShows;
 
 extern struct bvshows {
@@ -165,6 +166,7 @@ typedef struct charview {
     unsigned int checkselfintersects: 1;
     unsigned int showdebugchanges: 1;
     unsigned int inPreviewMode: 1;
+    unsigned int showfilledusingcairo:1;
     int hvoffset;		/* for showalmosthvlines */
     int layers_off_top;
     real scale;
@@ -786,8 +788,11 @@ extern void SFPrivateInfo(SplineFont *sf);
 extern void FVDelay(FontView *fv,void (*func)(FontView *));
 extern void GFI_FinishContextNew(struct gfi_data *d,FPST *fpst, int success);
 extern void SCPreparePopup(GWindow gw,SplineChar *sc, struct remap *remap, int enc, int actualuni);
+enum outlinesfm_flags { sfm_stroke=0x1, sfm_fill=0x2, sfm_nothing=0x4 };
+extern void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *set,
+				       Color fg, int dopoints, DRect *clip, enum outlinesfm_flags strokeFillMode );
 extern void CVDrawSplineSet(CharView *cv, GWindow pixmap, SplinePointList *set,
-	Color fg, int dopoints, DRect *clip );
+			    Color fg, int dopoints, DRect *clip );
 extern GWindow CVMakeTools(CharView *cv);
 extern GWindow CVMakeLayers(CharView *cv);
 extern GWindow BVMakeTools(BitmapView *bv);
