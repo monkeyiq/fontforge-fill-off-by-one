@@ -1166,20 +1166,20 @@ void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *s
 	    switch( strokeFillMode )
 	    {
 	    case sfm_stroke:
-		GDrawPathStroke(pixmap,(spl->is_clip_path ? clippathcol : fg)|0xff000000);
-		break;
+	    	GDrawPathStroke(pixmap,(spl->is_clip_path ? clippathcol : fg)|0xff000000);
+	    	break;
 	    case sfm_fill:
 	    {
-		if( currentSplineCounter == 3 )
-		    break;
+//	    	if( currentSplineCounter == 3 )
+//	    	    break;
 		
-		int clockwise = SplinePointListIsClockwise(spl);
-		Color fillColor = default_background;
-		if( clockwise ) {
-		    fillColor = spl->is_clip_path ? clippathcol : fg;
-		}
-		GDrawPathFill( pixmap, fillColor|0xff000000);
-		break;
+	    	int clockwise = SplinePointListIsClockwise(spl);
+	    	Color fillColor = default_background;
+	    	if( clockwise ) {
+	    	    fillColor = spl->is_clip_path ? clippathcol : fg;
+	    	}
+	    	GDrawPathFill( pixmap, fillColor|0xff000000);
+	    	break;
 	    }
 	    }
 	    
@@ -1190,6 +1190,19 @@ void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *s
 	    GPLFree(gpl);
 	}
     }
+
+	    /* switch( strokeFillMode ) */
+	    /* { */
+	    /* case sfm_stroke: */
+	    /* 	GDrawPathStroke(pixmap,fg|0xff000000); */
+	    /* 	break; */
+	    /* case sfm_fill: */
+	    /* { */
+	    /* 	Color fillColor = default_background; */
+	    /* 	GDrawPathFill( pixmap, fillColor|0xff000000); */
+	    /* 	break; */
+	    /* } */
+	    /* } */
     
     for ( spl = set; spl!=NULL; spl = spl->next ) {
 	if (( cv->markextrema || cv->markpoi ) && dopoints && !cv->b.sc->inspiro )

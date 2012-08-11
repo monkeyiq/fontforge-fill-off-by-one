@@ -160,7 +160,7 @@ static void (*_cairo_push_group)(cairo_t *);
 static void (*_cairo_pop_group_to_source)(cairo_t *);
 static cairo_surface_t *(*_cairo_get_group_target)(cairo_t *);
 static void (*_cairo_paint)(cairo_t *);
-
+static void (*_cairo_set_fill_rule)(cairo_t *cr, cairo_fill_rule_t fill_rule);
 static FcBool (*_FcCharSetHasChar)(const FcCharSet *,FcChar32);
 static FcPattern *(*_FcPatternCreate)(void);
 static void (*_FcPatternDestroy)(FcPattern *);
@@ -333,6 +333,9 @@ return( 0 );
 	    dlsym(libcairo,"cairo_get_group_target");
     _cairo_paint = (void (*)(cairo_t *))
 	    dlsym(libcairo,"cairo_paint");
+    _cairo_set_fill_rule = (void (*)(cairo_t *, cairo_fill_rule_t))
+	    dlsym(libcairo,"cairo_set_fill_rule");
+	
 
 /* Didn't show up until 1.6, and I've got 1.2 on my machine */ 
     if ( _cairo_format_stride_for_width==NULL )
@@ -747,6 +750,8 @@ void _GXCDraw_PathStroke(GWindow w,Color col) {
 }
 
 void _GXCDraw_PathFill(GWindow w,Color col) {
+    
+//    _cairo_set_fill_rule(((GXWindow) w)->cc,CAIRO_FILL_RULE_EVEN_ODD);
     _cairo_set_source_rgba(((GXWindow) w)->cc,COLOR_RED(col)/255.0,COLOR_GREEN(col)/255.0,COLOR_BLUE(col)/255.0,
 	    (col>>24)/255.0);
     _cairo_fill( ((GXWindow) w)->cc );
