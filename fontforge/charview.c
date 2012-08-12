@@ -1069,50 +1069,21 @@ void CVDrawSplineSet(CharView *cv, GWindow pixmap, SplinePointList *set,
     CVDrawSplineSetSpecialized( cv, pixmap, set, fg, dopoints, clip, sfm_stroke );
 }
 
-void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *set,
+void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *set,
 				Color fg, int dopoints, DRect *clip, enum outlinesfm_flags strokeFillMode ) {
     Spline *spline, *first;
     SplinePointList *spl;
     int truetype_markup = set==cv->b.gridfit && cv->dv!=NULL;
     int currentSplineCounter = 0;
 
-    if ( cv->inactive )
-	dopoints = false;
-
-    GDrawSetFont(pixmap,cv->small);		/* For point numbers */
-    for ( spl = set; spl!=NULL; spl = spl->next ) {
-	if ( spl->contour_name!=NULL )
-	    CVDrawContourName(cv,pixmap,spl,fg);
-	if ( dopoints>0 || (dopoints==-1 && cv->showpointnumbers) ) {
-	    first = NULL;
-	    if ( dopoints>0 )
-		DrawDirection(cv,pixmap,spl->first);
-	    if ( cv->b.sc->inspiro && hasspiro()) {
-		if ( dopoints>=0 ) {
-		    int i;
-		    if ( spl->spiros==NULL ) {
-			spl->spiros = SplineSet2SpiroCP(spl,&spl->spiro_cnt);
-			spl->spiro_max = spl->spiro_cnt;
-		    }
-		    for ( i=0; i<spl->spiro_cnt-1; ++i )
-			DrawSpiroPoint(cv,pixmap,&spl->spiros[i],spl,i);
-		}
-	    } else {
-		for ( spline = spl->first->next; spline!=NULL && spline!=first; spline=spline->to->next ) {
-		    DrawPoint(cv,pixmap,spline->from,spl,dopoints<0,truetype_markup);
-		    if ( first==NULL ) first = spline;
-		}
-		if ( spline==NULL )
-		    DrawPoint(cv,pixmap,spl->last,spl,dopoints<0,truetype_markup);
-	    }
-	}
+    if( strokeFillMode == sfm_fill ) {
+	GDrawFillRuleSetWinding(pixmap);
     }
-
     for ( spl = set; spl!=NULL; spl = spl->next ) {
 	if ( GDrawHasCairo(pixmap)&gc_buildpath ) {
 	    Spline *first, *spline;
 	    double x,y, cx1, cy1, cx2, cy2, dx,dy;
-	    GDrawPathStartNew(pixmap);
+	    GDrawPathStartSubNew(pixmap);
 	    x = rpt(cv,  cv->xoff + spl->first->me.x*cv->scale);
 	    y = rpt(cv, -cv->yoff + cv->height - spl->first->me.y*cv->scale);
 	    GDrawPathMoveTo(pixmap,x+.5,y+.5);
@@ -1169,40 +1140,181 @@ void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *s
 	    	GDrawPathStroke(pixmap,(spl->is_clip_path ? clippathcol : fg)|0xff000000);
 	    	break;
 	    case sfm_fill:
-	    {
-//	    	if( currentSplineCounter == 3 )
-//	    	    break;
-		
-	    	int clockwise = SplinePointListIsClockwise(spl);
-	    	Color fillColor = default_background;
-	    	if( clockwise ) {
-	    	    fillColor = spl->is_clip_path ? clippathcol : fg;
-	    	}
-	    	GDrawPathFill( pixmap, fillColor|0xff000000);
-	    	break;
-	    }
+	    case sfm_nothing:
+		break;
 	    }
 	    
 	} else {
 	    GPointList *gpl = MakePoly(cv,spl), *cur;
 	    for ( cur=gpl; cur!=NULL; cur=cur->next )
-		GDrawDrawPoly(pixmap,cur->gp,cur->cnt,spl->is_clip_path ? clippathcol : fg);
+	    	GDrawDrawPoly(pixmap,cur->gp,cur->cnt,spl->is_clip_path ? clippathcol : fg);
 	    GPLFree(gpl);
 	}
     }
 
-	    /* switch( strokeFillMode ) */
-	    /* { */
-	    /* case sfm_stroke: */
-	    /* 	GDrawPathStroke(pixmap,fg|0xff000000); */
-	    /* 	break; */
-	    /* case sfm_fill: */
-	    /* { */
-	    /* 	Color fillColor = default_background; */
-	    /* 	GDrawPathFill( pixmap, fillColor|0xff000000); */
-	    /* 	break; */
-	    /* } */
-	    /* } */
+    switch( strokeFillMode )
+    {
+    case sfm_fill:
+	GDrawPathFill( pixmap, fg|0xff000000);
+	break;
+    case sfm_stroke:
+    case sfm_nothing:
+	break;
+    }
+}
+
+
+void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *set,
+				Color fg, int dopoints, DRect *clip, enum outlinesfm_flags strokeFillMode ) {
+    Spline *spline, *first;
+    SplinePointList *spl;
+    int truetype_markup = set==cv->b.gridfit && cv->dv!=NULL;
+
+    if ( cv->inactive )
+	dopoints = false;
+
+    GDrawSetFont(pixmap,cv->small);		/* For point numbers */
+    for ( spl = set; spl!=NULL; spl = spl->next ) {
+	if ( spl->contour_name!=NULL )
+	    CVDrawContourName(cv,pixmap,spl,fg);
+	if ( dopoints>0 || (dopoints==-1 && cv->showpointnumbers) ) {
+	    first = NULL;
+	    if ( dopoints>0 )
+		DrawDirection(cv,pixmap,spl->first);
+	    if ( cv->b.sc->inspiro && hasspiro()) {
+		if ( dopoints>=0 ) {
+		    int i;
+		    if ( spl->spiros==NULL ) {
+			spl->spiros = SplineSet2SpiroCP(spl,&spl->spiro_cnt);
+			spl->spiro_max = spl->spiro_cnt;
+		    }
+		    for ( i=0; i<spl->spiro_cnt-1; ++i )
+			DrawSpiroPoint(cv,pixmap,&spl->spiros[i],spl,i);
+		}
+	    } else {
+		for ( spline = spl->first->next; spline!=NULL && spline!=first; spline=spline->to->next ) {
+		    DrawPoint(cv,pixmap,spline->from,spl,dopoints<0,truetype_markup);
+		    if ( first==NULL ) first = spline;
+		}
+		if ( spline==NULL )
+		    DrawPoint(cv,pixmap,spl->last,spl,dopoints<0,truetype_markup);
+	    }
+	}
+    }
+
+    if( strokeFillMode == sfm_fill ) {
+	CVDrawSplineSetOutlineOnly( cv, pixmap, set,
+				    fg, dopoints, clip, strokeFillMode );
+    }
+    if( strokeFillMode != sfm_nothing ) {
+	/*
+	 * If we were filling, we have to stroke the outline again to properly show
+	 * clip path splines which will possibly have a different stroke color
+	 */
+	CVDrawSplineSetOutlineOnly( cv, pixmap, set,
+				    fg, dopoints, clip, sfm_stroke );
+    }
+    
+#if 0    
+    for ( spl = set; spl!=NULL; spl = spl->next ) {
+	if ( GDrawHasCairo(pixmap)&gc_buildpath ) {
+	    Spline *first, *spline;
+	    double x,y, cx1, cy1, cx2, cy2, dx,dy;
+	    GDrawPathStartSubNew(pixmap);
+	    x = rpt(cv,  cv->xoff + spl->first->me.x*cv->scale);
+	    y = rpt(cv, -cv->yoff + cv->height - spl->first->me.y*cv->scale);
+	    GDrawPathMoveTo(pixmap,x+.5,y+.5);
+	    currentSplineCounter++;
+	    for ( spline=spl->first->next, first=NULL; spline!=first && spline!=NULL; spline=spline->to->next ) {
+		x = rpt(cv,  cv->xoff + spline->to->me.x*cv->scale);
+		y = rpt(cv, -cv->yoff + cv->height - spline->to->me.y*cv->scale);
+		/* printf("linear:%d order2:%d else:%d\n", */
+		/*        spline->knownlinear, */
+		/*        spline->order2, */
+		/*        !(spline->knownlinear || spline->order2)); */
+		if ( spline->knownlinear )
+		    GDrawPathLineTo(pixmap,x+.5,y+.5);
+		else if ( spline->order2 ) {
+		    dx = rint(spline->from->me.x*cv->scale) - spline->from->me.x*cv->scale;
+		    dy = rint(spline->from->me.y*cv->scale) - spline->from->me.y*cv->scale;
+		    cx1 = spline->from->me.x + spline->splines[0].c/3;
+		    cy1 = spline->from->me.y + spline->splines[1].c/3;
+		    cx2 = cx1 + (spline->splines[0].b+spline->splines[0].c)/3;
+		    cy2 = cy1 + (spline->splines[1].b+spline->splines[1].c)/3;
+		    cx1 = cv->xoff + cx1*cv->scale + dx;
+		    cy1 = -cv->yoff + cv->height - cy1*cv->scale - dy;
+		    dx = rint(spline->to->me.x*cv->scale) - spline->to->me.x*cv->scale;
+		    dy = rint(spline->to->me.y*cv->scale) - spline->to->me.y*cv->scale;
+		    cx2 = cv->xoff + cx2*cv->scale + dx;
+		    cy2 = -cv->yoff + cv->height - cy2*cv->scale - dy;
+		    GDrawPathCurveTo(pixmap,cx1+.5,cy1+.5,cx2+.5,cy2+.5,x+.5,y+.5);
+		} else {
+		    dx = rint(spline->from->me.x*cv->scale) - spline->from->me.x*cv->scale;
+		    dy = rint(spline->from->me.y*cv->scale) - spline->from->me.y*cv->scale;
+		    cx1 = cv->xoff + spline->from->nextcp.x*cv->scale + dx;
+		    cy1 = -cv->yoff + cv->height - spline->from->nextcp.y*cv->scale - dy;
+		    dx = rint(spline->to->me.x*cv->scale) - spline->to->me.x*cv->scale;
+		    dy = rint(spline->to->me.y*cv->scale) - spline->to->me.y*cv->scale;
+		    cx2 = cv->xoff + spline->to->prevcp.x*cv->scale + dx;
+		    cy2 = -cv->yoff + cv->height - spline->to->prevcp.y*cv->scale - dy;
+		    GDrawPathCurveTo(pixmap,cx1+.5,cy1+.5,cx2+.5,cy2+.5,x+.5,y+.5);
+		}
+		if ( first==NULL )
+		    first = spline;
+	    }
+	    if ( spline!=NULL )
+		GDrawPathClose(pixmap);
+	    printf("pathfill splintCounter:%d winding-clock:%d sfm:%d sf:%d sfc:%d spl:%p\n",
+		   currentSplineCounter,
+		   SplinePointListIsClockwise(spl),
+		   strokeFillMode,
+		   cv->showfilled, cv->showfilledusingcairo,
+		   spl );
+
+
+//	    GDrawPathStroke(pixmap,(spl->is_clip_path ? clippathcol : fg)|0xff000000);
+/* 	    switch( strokeFillMode ) */
+/* 	    { */
+/* 	    case sfm_stroke: */
+/* 	    	GDrawPathStroke(pixmap,(spl->is_clip_path ? clippathcol : fg)|0xff000000); */
+/* 	    	break; */
+/* 	    case sfm_fill: */
+/* 	    { */
+/* //	    	if( currentSplineCounter == 3 ) */
+/* //	    	    break; */
+		
+/* 	    	int clockwise = SplinePointListIsClockwise(spl); */
+/* 	    	Color fillColor = default_background; */
+/* 	    	if( clockwise ) { */
+/* 	    	    fillColor = spl->is_clip_path ? clippathcol : fg; */
+/* 	    	} */
+/* 	    	GDrawPathFill( pixmap, fillColor|0xff000000); */
+/* 	    	break; */
+/* 	    } */
+/* 	    } */
+	    
+	} else {
+	    GPointList *gpl = MakePoly(cv,spl), *cur;
+	    for ( cur=gpl; cur!=NULL; cur=cur->next )
+	    	GDrawDrawPoly(pixmap,cur->gp,cur->cnt,spl->is_clip_path ? clippathcol : fg);
+	    GPLFree(gpl);
+	}
+    }
+
+/*     Color fillColor = fg; */
+/* //    GDrawPathStroke(pixmap,fillColor|0xff000000); */
+/*     GDrawPathFill( pixmap, fillColor|0xff000000);  */
+
+    switch( strokeFillMode )
+    {
+    case sfm_stroke:
+	GDrawPathStroke(pixmap,fg|0xff000000);
+	break;
+    case sfm_fill:
+	GDrawPathFill( pixmap, fg|0xff000000);
+	break;
+    }
+#endif    
     
     for ( spl = set; spl!=NULL; spl = spl->next ) {
 	if (( cv->markextrema || cv->markpoi ) && dopoints && !cv->b.sc->inspiro )

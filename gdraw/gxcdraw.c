@@ -131,6 +131,7 @@ static void (*_cairo_clip)(cairo_t *);
 static void (*_cairo_save)(cairo_t *);
 static void (*_cairo_restore)(cairo_t *);
 static void (*_cairo_new_path)(cairo_t *);
+static void (*_cairo_new_sub_path)(cairo_t *);
 static void (*_cairo_close_path)(cairo_t *);
 static void (*_cairo_move_to)(cairo_t *,double,double);
 static void (*_cairo_line_to)(cairo_t *,double,double);
@@ -263,6 +264,8 @@ return( 0 );
 	    dlsym(libcairo,"cairo_set_source_rgba");
     _cairo_new_path = (void (*)(cairo_t *))
 	    dlsym(libcairo,"cairo_new_path");
+    _cairo_new_sub_path = (void (*)(cairo_t *))
+	    dlsym(libcairo,"cairo_new_sub_path");
     _cairo_move_to = (void (*)(cairo_t *,double,double))
 	    dlsym(libcairo,"cairo_move_to");
     _cairo_line_to = (void (*)(cairo_t *,double,double))
@@ -366,6 +369,7 @@ return( true );
 #  define _cairo_set_dash cairo_set_dash
 #  define _cairo_set_source_rgba cairo_set_source_rgba
 #  define _cairo_new_path cairo_new_path
+#  define _cairo_new_sub_path cairo_new_sub_path
 #  define _cairo_move_to cairo_move_to
 #  define _cairo_line_to cairo_line_to
 #  define _cairo_curve_to cairo_curve_to
@@ -724,6 +728,15 @@ void _GXCDraw_PathStartNew(GWindow w) {
     _cairo_new_path( ((GXWindow) w)->cc );
 }
 
+void _GXCDraw_PathStartSubNew(GWindow w) {
+    _cairo_new_sub_path( ((GXWindow) w)->cc );
+}
+
+int _GXCDraw_FillRuleSetWinding(GWindow w) {
+    _cairo_set_fill_rule(((GXWindow) w)->cc,CAIRO_FILL_RULE_WINDING);
+    return 1;
+}
+
 void _GXCDraw_PathClose(GWindow w) {
     _cairo_close_path( ((GXWindow) w)->cc );
 }
@@ -750,8 +763,6 @@ void _GXCDraw_PathStroke(GWindow w,Color col) {
 }
 
 void _GXCDraw_PathFill(GWindow w,Color col) {
-    
-//    _cairo_set_fill_rule(((GXWindow) w)->cc,CAIRO_FILL_RULE_EVEN_ODD);
     _cairo_set_source_rgba(((GXWindow) w)->cc,COLOR_RED(col)/255.0,COLOR_GREEN(col)/255.0,COLOR_BLUE(col)/255.0,
 	    (col>>24)/255.0);
     _cairo_fill( ((GXWindow) w)->cc );
