@@ -1091,10 +1091,6 @@ void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *s
 	    for ( spline=spl->first->next, first=NULL; spline!=first && spline!=NULL; spline=spline->to->next ) {
 		x = rpt(cv,  cv->xoff + spline->to->me.x*cv->scale);
 		y = rpt(cv, -cv->yoff + cv->height - spline->to->me.y*cv->scale);
-		/* printf("linear:%d order2:%d else:%d\n", */
-		/*        spline->knownlinear, */
-		/*        spline->order2, */
-		/*        !(spline->knownlinear || spline->order2)); */
 		if ( spline->knownlinear )
 		    GDrawPathLineTo(pixmap,x+.5,y+.5);
 		else if ( spline->order2 ) {
@@ -1127,12 +1123,6 @@ void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *s
 	    }
 	    if ( spline!=NULL )
 		GDrawPathClose(pixmap);
-	    printf("pathfill splintCounter:%d winding-clock:%d sfm:%d sf:%d sfc:%d spl:%p\n",
-		   currentSplineCounter,
-		   SplinePointListIsClockwise(spl),
-		   strokeFillMode,
-		   cv->showfilled, cv->showfilledusingcairo,
-		   spl );
 
 	    switch( strokeFillMode )
 	    {
@@ -1214,107 +1204,6 @@ void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *s
 	CVDrawSplineSetOutlineOnly( cv, pixmap, set,
 				    fg, dopoints, clip, sfm_stroke );
     }
-    
-#if 0    
-    for ( spl = set; spl!=NULL; spl = spl->next ) {
-	if ( GDrawHasCairo(pixmap)&gc_buildpath ) {
-	    Spline *first, *spline;
-	    double x,y, cx1, cy1, cx2, cy2, dx,dy;
-	    GDrawPathStartSubNew(pixmap);
-	    x = rpt(cv,  cv->xoff + spl->first->me.x*cv->scale);
-	    y = rpt(cv, -cv->yoff + cv->height - spl->first->me.y*cv->scale);
-	    GDrawPathMoveTo(pixmap,x+.5,y+.5);
-	    currentSplineCounter++;
-	    for ( spline=spl->first->next, first=NULL; spline!=first && spline!=NULL; spline=spline->to->next ) {
-		x = rpt(cv,  cv->xoff + spline->to->me.x*cv->scale);
-		y = rpt(cv, -cv->yoff + cv->height - spline->to->me.y*cv->scale);
-		/* printf("linear:%d order2:%d else:%d\n", */
-		/*        spline->knownlinear, */
-		/*        spline->order2, */
-		/*        !(spline->knownlinear || spline->order2)); */
-		if ( spline->knownlinear )
-		    GDrawPathLineTo(pixmap,x+.5,y+.5);
-		else if ( spline->order2 ) {
-		    dx = rint(spline->from->me.x*cv->scale) - spline->from->me.x*cv->scale;
-		    dy = rint(spline->from->me.y*cv->scale) - spline->from->me.y*cv->scale;
-		    cx1 = spline->from->me.x + spline->splines[0].c/3;
-		    cy1 = spline->from->me.y + spline->splines[1].c/3;
-		    cx2 = cx1 + (spline->splines[0].b+spline->splines[0].c)/3;
-		    cy2 = cy1 + (spline->splines[1].b+spline->splines[1].c)/3;
-		    cx1 = cv->xoff + cx1*cv->scale + dx;
-		    cy1 = -cv->yoff + cv->height - cy1*cv->scale - dy;
-		    dx = rint(spline->to->me.x*cv->scale) - spline->to->me.x*cv->scale;
-		    dy = rint(spline->to->me.y*cv->scale) - spline->to->me.y*cv->scale;
-		    cx2 = cv->xoff + cx2*cv->scale + dx;
-		    cy2 = -cv->yoff + cv->height - cy2*cv->scale - dy;
-		    GDrawPathCurveTo(pixmap,cx1+.5,cy1+.5,cx2+.5,cy2+.5,x+.5,y+.5);
-		} else {
-		    dx = rint(spline->from->me.x*cv->scale) - spline->from->me.x*cv->scale;
-		    dy = rint(spline->from->me.y*cv->scale) - spline->from->me.y*cv->scale;
-		    cx1 = cv->xoff + spline->from->nextcp.x*cv->scale + dx;
-		    cy1 = -cv->yoff + cv->height - spline->from->nextcp.y*cv->scale - dy;
-		    dx = rint(spline->to->me.x*cv->scale) - spline->to->me.x*cv->scale;
-		    dy = rint(spline->to->me.y*cv->scale) - spline->to->me.y*cv->scale;
-		    cx2 = cv->xoff + spline->to->prevcp.x*cv->scale + dx;
-		    cy2 = -cv->yoff + cv->height - spline->to->prevcp.y*cv->scale - dy;
-		    GDrawPathCurveTo(pixmap,cx1+.5,cy1+.5,cx2+.5,cy2+.5,x+.5,y+.5);
-		}
-		if ( first==NULL )
-		    first = spline;
-	    }
-	    if ( spline!=NULL )
-		GDrawPathClose(pixmap);
-	    printf("pathfill splintCounter:%d winding-clock:%d sfm:%d sf:%d sfc:%d spl:%p\n",
-		   currentSplineCounter,
-		   SplinePointListIsClockwise(spl),
-		   strokeFillMode,
-		   cv->showfilled, cv->showfilledusingcairo,
-		   spl );
-
-
-//	    GDrawPathStroke(pixmap,(spl->is_clip_path ? clippathcol : fg)|0xff000000);
-/* 	    switch( strokeFillMode ) */
-/* 	    { */
-/* 	    case sfm_stroke: */
-/* 	    	GDrawPathStroke(pixmap,(spl->is_clip_path ? clippathcol : fg)|0xff000000); */
-/* 	    	break; */
-/* 	    case sfm_fill: */
-/* 	    { */
-/* //	    	if( currentSplineCounter == 3 ) */
-/* //	    	    break; */
-		
-/* 	    	int clockwise = SplinePointListIsClockwise(spl); */
-/* 	    	Color fillColor = default_background; */
-/* 	    	if( clockwise ) { */
-/* 	    	    fillColor = spl->is_clip_path ? clippathcol : fg; */
-/* 	    	} */
-/* 	    	GDrawPathFill( pixmap, fillColor|0xff000000); */
-/* 	    	break; */
-/* 	    } */
-/* 	    } */
-	    
-	} else {
-	    GPointList *gpl = MakePoly(cv,spl), *cur;
-	    for ( cur=gpl; cur!=NULL; cur=cur->next )
-	    	GDrawDrawPoly(pixmap,cur->gp,cur->cnt,spl->is_clip_path ? clippathcol : fg);
-	    GPLFree(gpl);
-	}
-    }
-
-/*     Color fillColor = fg; */
-/* //    GDrawPathStroke(pixmap,fillColor|0xff000000); */
-/*     GDrawPathFill( pixmap, fillColor|0xff000000);  */
-
-    switch( strokeFillMode )
-    {
-    case sfm_stroke:
-	GDrawPathStroke(pixmap,fg|0xff000000);
-	break;
-    case sfm_fill:
-	GDrawPathFill( pixmap, fg|0xff000000);
-	break;
-    }
-#endif    
     
     for ( spl = set; spl!=NULL; spl = spl->next ) {
 	if (( cv->markextrema || cv->markpoi ) && dopoints && !cv->b.sc->inspiro )
@@ -2526,11 +2415,15 @@ static void CVExpose(CharView *cv, GWindow pixmap, GEvent *event ) {
     /* We draw the outline only at this stage so as to have it layered */
     /* over the control points if they are currently visible. */
     /* CVDrawLayerSplineSet() will draw both the control points, and the font outline over those */
+    /* NB:
+     *     Drawing the stroked outline may also use the color
+     *     clippathcol for some splines, so we can't really avoid a
+     *     restroke unless we are sure
+     *     FOR-ALL(splines):spl->is_clip_path==0 */
     if( cv->showfilledusingcairo==1 ) {
 	strokeFillMode = sfm_stroke;
     }
     if( GlyphHasBeenFilled ) {
-//	strokeFillMode = sfm_nothing;
 	strokeFillMode = sfm_stroke;
     }
     
@@ -2661,20 +2554,17 @@ void CVRegenFill(CharView *cv) {
 		depth = 4;
 		clut_len = 16;
 	    }
-	    printf("aa fill. use_freetype_with_aa_fill_cv:%d depth:%d\n",use_freetype_with_aa_fill_cv,depth);
 	    cv->filled = SplineCharFreeTypeRasterizeNoHints(cv->b.sc,layer,
 		size,72, depth);
 	    if ( cv->filled==NULL && size<2000 ) {
 		/* There are some glyphs which freetype won't rasterize in */
 		/* mono mode, but will in grey scale. Don't ask me why */
-		printf("aa fill. going grey on second attempt\n");
 		cv->filled = SplineCharFreeTypeRasterizeNoHints(cv->b.sc,
 		    layer, size, 72, 4);
 		clut_len = 16;
 	    }
 	}
 	if ( cv->filled==NULL ) {
-	    printf("spline rasterize....\n");
 	    cv->filled = SplineCharRasterize(cv->b.sc,layer,size+.1);
 	}
 	if ( cv->filled==NULL )
