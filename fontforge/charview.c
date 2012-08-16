@@ -1076,10 +1076,10 @@ void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *s
     int truetype_markup = set==cv->b.gridfit && cv->dv!=NULL;
     int currentSplineCounter = 0;
 
-    printf("CVDrawSplineSetOutlineOnly() sfm:%d cairo-filling:%d has-cairo:%d\n",
-	   strokeFillMode,
-	   (strokeFillMode==sfm_fill),
-	   (GDrawHasCairo(pixmap)&gc_buildpath));
+    /* printf("CVDrawSplineSetOutlineOnly() sfm:%d cairo-filling:%d has-cairo:%d\n", */
+    /* 	   strokeFillMode, */
+    /* 	   (strokeFillMode==sfm_fill), */
+    /* 	   (GDrawHasCairo(pixmap)&gc_buildpath)); */
     
     if( strokeFillMode == sfm_fill ) {
 	GDrawFillRuleSetWinding(pixmap);
@@ -1140,7 +1140,6 @@ void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *s
 	    }
 	    
 	} else {
-	    printf("gah! no cairos are available... \n");
 	    GPointList *gpl = MakePoly(cv,spl), *cur;
 	    for ( cur=gpl; cur!=NULL; cur=cur->next )
 	    	GDrawDrawPoly(pixmap,cur->gp,cur->cnt,spl->is_clip_path ? clippathcol : fg);
@@ -1168,6 +1167,8 @@ void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *s
 
     if ( cv->inactive )
 	dopoints = false;
+
+//    printf("CVDrawSplineSetSpecialized() sfm:%d\n", strokeFillMode );
 
     GDrawSetFont(pixmap,cv->small);		/* For point numbers */
     for ( spl = set; spl!=NULL; spl = spl->next ) {
@@ -1241,7 +1242,11 @@ static void CVDrawLayerSplineSet(CharView *cv, GWindow pixmap, Layer *layer,
     }
     if ( ml && !active && layer!=&cv->b.sc->layers[ly_back] )
 	GDrawSetDashedLine(pixmap,5,5,cv->xoff+cv->height-cv->yoff);
-    CVDrawSplineSet(cv,pixmap,layer->splines,fg,dopoints && active,clip);
+    enum outlinesfm_flags refsfm = sfm_stroke;
+    if( cv->showfilledusingcairo ) {
+	refsfm = sfm_fill;
+    }
+    CVDrawSplineSetSpecialized(cv,pixmap,layer->splines,fg,dopoints && active,clip,refsfm);
     if ( ml && !active && layer!=&cv->b.sc->layers[ly_back] )
 	GDrawSetDashedLine(pixmap,0,0,0);
 #if 0
@@ -2441,8 +2446,12 @@ static void CVExpose(CharView *cv, GWindow pixmap, GEvent *event ) {
 	for ( rf=cv->b.sc->layers[layer].refs; rf!=NULL; rf = rf->next ) {
 	    if ( cv->showrefnames )
 		CVDrawRefName(cv,pixmap,rf,0);
+	    enum outlinesfm_flags refsfm = sfm_stroke;
+	    if( cv->showfilledusingcairo ) {
+		refsfm = sfm_fill;
+	    }
 	    for ( rlayer=0; rlayer<rf->layer_cnt; ++rlayer )
-		CVDrawSplineSet(cv,pixmap,rf->layers[rlayer].splines,foreoutlinecol,-1,&clip);
+		CVDrawSplineSetSpecialized(cv,pixmap,rf->layers[rlayer].splines,foreoutlinecol,-1,&clip, refsfm);
 	    if ( rf->selected && cv->b.layerheads[cv->b.drawmode]==&cv->b.sc->layers[layer])
 		CVDrawBB(cv,pixmap,&rf->bb);
 	}
