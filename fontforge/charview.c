@@ -1076,6 +1076,10 @@ void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *s
     int truetype_markup = set==cv->b.gridfit && cv->dv!=NULL;
     int currentSplineCounter = 0;
 
+    printf("CVDrawSplineSetOutlineOnly() sfm:%d cairo-filling:%d\n",
+	   strokeFillMode,
+	   (strokeFillMode==sfm_fill));
+    
     if( strokeFillMode == sfm_fill ) {
 	GDrawFillRuleSetWinding(pixmap);
     }
