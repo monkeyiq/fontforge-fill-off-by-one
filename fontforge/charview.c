@@ -1076,9 +1076,10 @@ void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *s
     int truetype_markup = set==cv->b.gridfit && cv->dv!=NULL;
     int currentSplineCounter = 0;
 
-    printf("CVDrawSplineSetOutlineOnly() sfm:%d cairo-filling:%d\n",
+    printf("CVDrawSplineSetOutlineOnly() sfm:%d cairo-filling:%d has-cairo:%d\n",
 	   strokeFillMode,
-	   (strokeFillMode==sfm_fill));
+	   (strokeFillMode==sfm_fill),
+	   (GDrawHasCairo(pixmap)&gc_buildpath));
     
     if( strokeFillMode == sfm_fill ) {
 	GDrawFillRuleSetWinding(pixmap);
@@ -1139,6 +1140,7 @@ void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *s
 	    }
 	    
 	} else {
+	    printf("gah! no cairos are available... \n");
 	    GPointList *gpl = MakePoly(cv,spl), *cur;
 	    for ( cur=gpl; cur!=NULL; cur=cur->next )
 	    	GDrawDrawPoly(pixmap,cur->gp,cur->cnt,spl->is_clip_path ? clippathcol : fg);
