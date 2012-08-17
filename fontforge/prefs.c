@@ -56,7 +56,6 @@ extern Encoding *default_encoding;
 extern int autohint_before_generate;
 extern int use_freetype_to_rasterize_fv;
 extern int use_freetype_with_aa_fill_cv;
-extern int prefs_preview_mode_uses_cairo_fill;
 extern int OpenCharsInNewWindow;
 extern int ItalicConstrained;
 extern int accent_offset;
@@ -285,7 +284,6 @@ static struct prefs_list {
 	{ N_("SplashScreen"), pr_bool, &splash, NULL, NULL, 'S', NULL, 0, N_("Show splash screen on start-up") },
 #ifndef _NO_LIBCAIRO
 	{ N_("UseCairoDrawing"), pr_bool, &prefs_usecairo, NULL, NULL, '\0', NULL, 0, N_("Use the cairo library for drawing (if available)\nThis makes for prettier (anti-aliased) but slower drawing\nThis applies to any windows created AFTER this is set.\nAlready existing windows will continue as they are.") },
-	{ N_("PreviewModeFillCairo"), pr_bool, &prefs_preview_mode_uses_cairo_fill, NULL, NULL, 'O', NULL, 0, N_("When in Preview Mode in the outline view,\nuse cairo to render the glyph fill.") },
 #endif
 #ifndef _NO_LIBPANGO
 	{ N_("UsePangoDrawing"), pr_bool, &prefs_usepango, NULL, NULL, '\0', NULL, 0, N_("Use the pango library for text (if available)\nThis makes for prettier and handles complex scripts.\nBut it can slow things down on older machines.\nThis applies to any windows created AFTER this is set.\nAlready existing windows will continue as they are.") },
@@ -472,7 +470,6 @@ static struct prefs_list {
 	{ "AnchorControlPixelSize", pr_int, &aa_pixelsize, NULL, NULL, '\0', NULL, 1, NULL },
 #ifdef _NO_LIBCAIRO
 	{ "UseCairoDrawing", pr_bool, &prefs_usecairo, NULL, NULL, '\0', NULL, 0, N_("Use the cairo library for drawing (if available)\nThis makes for prettier (anti-aliased) but slower drawing\nThis applies to any windows created AFTER this is set.\nAlready existing windows will continue as they are.") },
-	{ N_("PreviewModeFillCairo"), pr_bool, &prefs_preview_mode_uses_cairo_fill, NULL, NULL, 'O', NULL, 0, N_("When in Preview Mode in the outline view,\nuse cairo to render the glyph fill.") },
 #endif
 #ifdef _NO_LIBPANGO
 	{ "UsePangoDrawing", pr_bool, &prefs_usepango, NULL, NULL, '\0', NULL, 0, N_("Use the cairo library for drawing (if available)\nThis makes for prettier (anti-aliased) but slower drawing\nThis applies to any windows created AFTER this is set.\nAlready existing windows will continue as they are.") },

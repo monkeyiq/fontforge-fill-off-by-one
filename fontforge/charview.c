@@ -71,7 +71,6 @@ float snapdistance=3.5;
 int updateflex = false;
 extern int clear_tt_instructions_when_needed;
 int use_freetype_with_aa_fill_cv = 1;
-int prefs_preview_mode_uses_cairo_fill = 0;
 int interpCPsOnMotion=false;
 int default_cv_width = 540;
 int default_cv_height = 540;
@@ -107,8 +106,7 @@ struct cvshows CVShows = {
 	0,		/* show curves which are almost, but not exactly horizontal or vertical at the end-points */
 	3,		/* number of em-units a coord difference must be less than to qualify for almost hv */
 	1,		/* Check for self-intersections in the element view */
-	1,		/* In tt debugging, mark changed rasters differently */
-	0               /* show filled by directly drawing the fill using cairo */
+	1		/* In tt debugging, mark changed rasters differently */
 };
 struct cvshows CVShowsPrevewToggleSavedState;
 
@@ -226,6 +224,13 @@ static struct resed charview2_re[] = {
  */
 static double rpt(CharView *cv, double pt) {
     return cv->snapoutlines ? rint(pt) : pt;
+}
+
+static int shouldShowFilledUsingCairo(CharView *cv) {
+    if ( cv->showfilled && GDrawHasCairo(cv->v)&gc_buildpath ) {
+	return 1;
+    }
+    return 0;
 }
 
 void CVColInit( void ) {
@@ -1087,11 +1092,6 @@ void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *s
     int truetype_markup = set==cv->b.gridfit && cv->dv!=NULL;
     int currentSplineCounter = 0;
 
-    /* printf("CVDrawSplineSetOutlineOnly() sfm:%d cairo-filling:%d has-cairo:%d\n", */
-    /* 	   strokeFillMode, */
-    /* 	   (strokeFillMode==sfm_fill), */
-    /* 	   (GDrawHasCairo(pixmap)&gc_buildpath)); */
-    
     if( strokeFillMode == sfm_fill ) {
 	GDrawFillRuleSetWinding(pixmap);
     }
@@ -1165,9 +1165,6 @@ void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *s
 	if( cv->inPreviewMode ) {
 	    c = previewfillcol;
 	}
-	printf("preview mode3 fill...%x\n", fillcol);
-	printf("preview mode3 red: %x\n", 0xffff0000);
-	printf("preview mode3 act: %x\n", c|0xff000000);
 	GDrawPathFill( pixmap, c|0xff000000);
 	break;
     case sfm_stroke:
@@ -1185,8 +1182,6 @@ void CVDrawSplineSetSpecialized(CharView *cv, GWindow pixmap, SplinePointList *s
 
     if ( cv->inactive )
 	dopoints = false;
-
-//    printf("CVDrawSplineSetSpecialized() sfm:%d\n", strokeFillMode );
 
     GDrawSetFont(pixmap,cv->small);		/* For point numbers */
     for ( spl = set; spl!=NULL; spl = spl->next ) {
@@ -1261,7 +1256,7 @@ static void CVDrawLayerSplineSet(CharView *cv, GWindow pixmap, Layer *layer,
     if ( ml && !active && layer!=&cv->b.sc->layers[ly_back] )
 	GDrawSetDashedLine(pixmap,5,5,cv->xoff+cv->height-cv->yoff);
     enum outlinesfm_flags refsfm = sfm_stroke;
-    if( cv->showfilledusingcairo ) {
+    if( shouldShowFilledUsingCairo(cv) ) {
 	refsfm = sfm_fill;
     }
     CVDrawSplineSetSpecialized(cv,pixmap,layer->splines,fg,dopoints && active,clip,refsfm);
@@ -2294,7 +2289,7 @@ static int CVExposeGlyphFill(CharView *cv, GWindow pixmap, GEvent *event, DRect*
 	filled = 1;
     }
 
-    if( cv->showfilledusingcairo ) {
+    if( shouldShowFilledUsingCairo(cv) ) {
 	layer = cvlayer;
 	if ( layer>=0 ) {
 	    CVDrawLayerSplineSet(cv,pixmap,&cv->b.sc->layers[layer],foreoutlinecol,
@@ -2317,7 +2312,7 @@ static void CVExpose(CharView *cv, GWindow pixmap, GEvent *event ) {
     int GlyphHasBeenFilled = 0;
     GDrawPushClip(pixmap,&event->u.expose.rect,&old);
 
-    if( cv->showfilledusingcairo==1 ) {
+    if( shouldShowFilledUsingCairo(cv) ) {
 	strokeFillMode = sfm_fill;
     }
     
@@ -2449,7 +2444,7 @@ static void CVExpose(CharView *cv, GWindow pixmap, GEvent *event ) {
      *     clippathcol for some splines, so we can't really avoid a
      *     restroke unless we are sure
      *     FOR-ALL(splines):spl->is_clip_path==0 */
-    if( cv->showfilledusingcairo==1 ) {
+    if( shouldShowFilledUsingCairo(cv) ) {
 	strokeFillMode = sfm_stroke;
     }
     if( GlyphHasBeenFilled ) {
@@ -2465,7 +2460,7 @@ static void CVExpose(CharView *cv, GWindow pixmap, GEvent *event ) {
 	    if ( cv->showrefnames )
 		CVDrawRefName(cv,pixmap,rf,0);
 	    enum outlinesfm_flags refsfm = sfm_stroke;
-	    if( cv->showfilledusingcairo ) {
+	    if( shouldShowFilledUsingCairo(cv) ) {
 		refsfm = sfm_fill;
 	    }
 	    for ( rlayer=0; rlayer<rf->layer_cnt; ++rlayer )
@@ -5185,7 +5180,6 @@ return( true );
 #define MID_Prev	2008
 #define MID_HideRulers	2009
 #define MID_Preview     2010
-#define MID_FillUsingCairo 2011
 #define MID_NextDef	2012
 #define MID_PrevDef	2013
 #define MID_DisplayCompositions	2014
@@ -5889,20 +5883,9 @@ static void CVMenuFill(GWindow gw,struct gmenuitem *mi,GEvent *e) {
     CharView *cv = (CharView *) GDrawGetUserData(gw);
 
     CVShows.showfilled = cv->showfilled = !cv->showfilled;
-    CVShows.showfilledusingcairo = cv->showfilledusingcairo = 0;
     CVRegenFill(cv);
     GDrawRequestExpose(cv->v,NULL,false);
 }
-
-static void CVMenuFillUsingCairo(GWindow gw,struct gmenuitem *mi,GEvent *e) {
-    CharView *cv = (CharView *) GDrawGetUserData(gw);
-
-    CVShows.showfilledusingcairo = cv->showfilledusingcairo = !cv->showfilledusingcairo;
-    CVShows.showfilled = cv->showfilled = 0;
-    CVRegenFill(cv);
-    GDrawRequestExpose(cv->v,NULL,false);
-}
-
 
 static struct cvshows* cvshowsCopyTo( struct cvshows* dst, CharView* src ) 
 {
@@ -5913,7 +5896,6 @@ static struct cvshows* cvshowsCopyTo( struct cvshows* dst, CharView* src )
     dst->showdhints = src->showdhints;
     dst->showpoints = src->showpoints;
     dst->showfilled = src->showfilled;
-    dst->showfilledusingcairo = src->showfilledusingcairo;
     dst->showrulers = src->showrulers;
     dst->showrounds = src->showrounds;
     dst->showmdx = src->showmdx;
@@ -5946,7 +5928,6 @@ static CharView* cvshowsCopyFrom( CharView* dst, struct cvshows* src )
     dst->showdhints = src->showdhints;
     dst->showpoints = src->showpoints;
     dst->showfilled = src->showfilled;
-    dst->showfilledusingcairo = src->showfilledusingcairo;
     dst->showrulers = src->showrulers;
     dst->showrounds = src->showrounds;
     dst->showmdx = src->showmdx;
@@ -5985,8 +5966,7 @@ void CVPreviewModeSet(GWindow gw, int checked ) {
         cv->showvhints = 0;
         cv->showdhints = 0;
         cv->showpoints = 0;
-        cv->showfilled = !prefs_preview_mode_uses_cairo_fill;
-	cv->showfilledusingcairo = prefs_preview_mode_uses_cairo_fill;
+        cv->showfilled = 1;
         cv->showrounds = 0;
         cv->showanchor = 0;
         cv->showrefnames = 0;
@@ -9414,9 +9394,6 @@ static void swlistcheck(GWindow gw,struct gmenuitem *mi,GEvent *e) {
 	  case MID_Fill:
 	    mi->ti.checked = cv->showfilled;
 	  break;
-	  case MID_FillUsingCairo:
-	    mi->ti.checked = cv->showfilledusingcairo;
-	  break;
 	  case MID_ShowHHints:
 	    mi->ti.checked = cv->showhhints;
 	    mi->ti.disabled = sf->multilayer;
@@ -10166,8 +10143,7 @@ static GMenuItem2 swlist[] = {
     { { (unichar_t *) N_("(Define \"Almost\")"), NULL, COLOR_DEFAULT, COLOR_DEFAULT, NULL, NULL, 0, 1, 0, 0, 0, 0, 1, 1, 0, 'M' }, H_("(Define \"Almost\")|No Shortcut"), NULL, NULL, CVMenuDefineAlmost, MID_DefineAlmost },
     { { (unichar_t *) N_("_Side Bearings"), NULL, COLOR_DEFAULT, COLOR_DEFAULT, NULL, NULL, 0, 1, 1, 0, 0, 0, 1, 1, 0, 'M' }, H_("Side Bearings|No Shortcut"), NULL, NULL, CVMenuShowSideBearings, MID_ShowSideBearings },
     { { (unichar_t *) N_("Reference Names"), NULL, COLOR_DEFAULT, COLOR_DEFAULT, NULL, NULL, 0, 1, 1, 0, 0, 0, 1, 1, 0, 'M' }, H_("Reference Names|No Shortcut"), NULL, NULL, CVMenuShowRefNames, MID_ShowRefNames },
-    { { (unichar_t *) N_("_Fill Using Freetype"), NULL, COLOR_DEFAULT, COLOR_DEFAULT, NULL, NULL, 0, 1, 1, 0, 0, 0, 1, 1, 0, 'l' }, H_("Fill|No Shortcut"), NULL, NULL, CVMenuFill, MID_Fill },
-    { { (unichar_t *) N_("Fil_l Using Cairo"), NULL, COLOR_DEFAULT, COLOR_DEFAULT, NULL, NULL, 0, 1, 1, 0, 0, 0, 1, 1, 0, 'l' }, H_("Fill|No Shortcut"), NULL, NULL, CVMenuFillUsingCairo, MID_FillUsingCairo },
+    { { (unichar_t *) N_("_Fill"), NULL, COLOR_DEFAULT, COLOR_DEFAULT, NULL, NULL, 0, 1, 1, 0, 0, 0, 1, 1, 0, 'l' }, H_("Fill|No Shortcut"), NULL, NULL, CVMenuFill, MID_Fill },
     { { (unichar_t *) N_("Previe_w"), NULL, COLOR_DEFAULT, COLOR_DEFAULT, NULL, NULL, 0, 1, 1, 0, 0, 0, 1, 1, 0, 'l' }, H_("Preview|Ctl+`"), NULL, NULL, CVMenuPreview, MID_Preview },
     { { NULL, NULL, COLOR_DEFAULT, COLOR_DEFAULT, NULL, NULL, 0, 1, 0, 0, 0, 1, 0, 0, 0, '\0' }, NULL, NULL, NULL, NULL, 0 }, /* line */
     { { (unichar_t *) N_("Pale_ttes"), NULL, COLOR_DEFAULT, COLOR_DEFAULT, NULL, NULL, 0, 1, 0, 0, 0, 0, 1, 1, 0, 'P' }, NULL, pllist, pllistcheck, NULL, 0 },
@@ -10435,7 +10411,6 @@ static void _CharViewCreate(CharView *cv, SplineChar *sc, FontView *fv,int enc) 
     cv->showpoints = CVShows.showpoints;
     cv->showrulers = CVShows.showrulers;
     cv->showfilled = CVShows.showfilled;
-    cv->showfilledusingcairo = CVShows.showfilledusingcairo;
     cv->showrounds = CVShows.showrounds;
     cv->showmdx = CVShows.showmdx;
     cv->showmdy = CVShows.showmdy;
