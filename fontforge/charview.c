@@ -161,6 +161,7 @@ static Color backimagecol = 0x707070;
 static Color fillcol = 0x80707070;		/* Translucent */
 static Color tracecol = 0x008000;
 static Color rulerbigtickcol = 0x008000;
+static Color previewfillcol = 0x0f0f0f;
 
 static int cvcolsinited = false;
 static struct resed charview_re[] = {
@@ -216,6 +217,7 @@ static struct resed charview2_re[] = {
     { N_("Raster Dark Color"), "RasterDarkColor", rt_coloralpha, &rasterdarkcol, N_("When debugging in grey-scale this is the color of a raster block which is fully covered."), NULL, { 0 }, 0, 0 },
     { N_("Delta Grid Color"), "DeltaGridColor", rt_color, &deltagridcol, N_("Indicates a notable grid pixel when suggesting deltas."), NULL, { 0 }, 0, 0 },
     { N_("Ruler Big Tick Color"), "RulerBigTickColor", rt_color, &rulerbigtickcol, N_("The color used to draw the large tick marks in rulers."), NULL, { 0 }, 0, 0 },
+    { N_("Preview Fill Color"), "PreviewFillColor", rt_coloralpha, &previewfillcol, N_("The color used to fill the outline when in preview mode"), NULL, { 0 }, 0, 0 },
     RESED_EMPTY
 };
 
@@ -232,6 +234,15 @@ return;
     GResEditFind( charview_re, "CharView.");
     GResEditFind( charview2_re, "CharView.");
     cvcolsinited = true;
+    
+    if( _GResource_FindResName("CharView.PreviewFillColor") == -1 ) {
+	// no explicit previewfillcolor
+	previewfillcol = fillcol;
+	if( _GResource_FindResName("CharView.FillColor") == -1 ) {
+	    // no explicit fill color either
+	    previewfillcol = 0x000000;
+	}
+    }
 }
 
 
@@ -1147,10 +1158,17 @@ void CVDrawSplineSetOutlineOnly(CharView *cv, GWindow pixmap, SplinePointList *s
 	}
     }
 
+    Color c = fillcol;
     switch( strokeFillMode )
     {
     case sfm_fill:
-	GDrawPathFill( pixmap, fg|0xff000000);
+	if( cv->inPreviewMode ) {
+	    c = previewfillcol;
+	}
+	printf("preview mode3 fill...%x\n", fillcol);
+	printf("preview mode3 red: %x\n", 0xffff0000);
+	printf("preview mode3 act: %x\n", c|0xff000000);
+	GDrawPathFill( pixmap, c|0xff000000);
 	break;
     case sfm_stroke:
     case sfm_nothing:
